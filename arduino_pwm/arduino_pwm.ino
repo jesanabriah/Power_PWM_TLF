@@ -10,20 +10,29 @@
 //                    addr, en,rw,rs,d4,d5,d6,d7,bl,blpol
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE);
 
-int TH, TL;
+unsigned int TH, TL;
 float Amplitud;
-int temp_TH, temp_TL;
+unsigned int temp_TH, temp_TL;
 float temp_Amplitud;
 
+boolean up;
+unsigned long int timeNow, timeEnd;
+unsigned int timeLeft;
+
+char charUp = 0xFF;
+
 void setup(){
+  
+  up = true;
+  timeNow = 0;
+  timeEnd = 0;
+  
   TH = 0;
   TL = 0;
   Amplitud = 0.0;
   
   lcd.begin(20,4);
-  
-  lcd.setCursor(0,0);
-  lcd.print("High by 0");
+
   lcd.setCursor(13,0);
   lcd.print("seconds");
   
@@ -44,21 +53,57 @@ void setup(){
   lcd.print(Amplitud);
   lcd.setCursor(15,3);
   lcd.print("Volts");
+
+  pinMode(13, OUTPUT);
+  digitalWrite(13, LOW);
+}
+
+unsigned long int seconds(){
+  return millis()/1000;
 }
 
 void loop(){
-  updateParameters();
-}
 
-void updateParameters(){
+  //Check step
+  timeNow = seconds();
+  
+  if(timeNow >= timeEnd){
+    lcd.setCursor(0,0);
+    if(up){
+      up = false;
+      digitalWrite(13, LOW);
+      timeEnd = timeNow + TL;
+      lcd.print("Low  ");      
+      lcd.print("___");
+    }
+    else{
+      up = true;
+      digitalWrite(13, HIGH);
+      timeEnd = timeNow + TH;
+      lcd.print("High ");      
+      lcd.print(charUp);
+      lcd.print(charUp);
+      lcd.print(charUp);
+    }
+  }
 
+  timeLeft = timeEnd - timeNow;
+  lcd.setCursor(9,0);
+  lcd.print("   ");
+  lcd.setCursor(9,0);
+  lcd.print(timeLeft);
+  
+  //Update parameters
   temp_TH = TH;
   TH = analogRead(A0)/2;
   if (temp_TH != TH){
     lcd.setCursor(5,1);
     lcd.print("       ");
     lcd.setCursor(5,1);
-    lcd.print(TH);
+    lcd.print(TH);    
+    if(up){
+      timeEnd = timeEnd - temp_TH + TH;
+    }
   }
   
   temp_TL = TL;
@@ -68,6 +113,9 @@ void updateParameters(){
     lcd.print("       ");
     lcd.setCursor(5,2);
     lcd.print(TL);
+    if (!up){
+      timeEnd = timeEnd - temp_TL + TL;
+    }
   }
   
   temp_Amplitud = Amplitud;
@@ -78,5 +126,8 @@ void updateParameters(){
     lcd.setCursor(8,3);
     lcd.print(Amplitud);
   }
+
+  //Wait a moment
   delay(50);
 }
+
