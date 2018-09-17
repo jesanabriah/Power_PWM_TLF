@@ -17,15 +17,20 @@ float temp_Amplitud;
 
 boolean up;
 unsigned long int timeNow, timeEnd;
-unsigned int timeLeft;
+unsigned int timeLeft, temp_timeLeft;
 
 char charUp = 0xFF;
 
+const int N = 64;
+
 void setup(){
+  
+  analogReference(DEFAULT);
   
   up = true;
   timeNow = 0;
   timeEnd = 0;
+  timeLeft = 0;
   
   TH = 0;
   TL = 0;
@@ -54,12 +59,25 @@ void setup(){
   lcd.setCursor(15,3);
   lcd.print("Volts");
 
-  pinMode(13, OUTPUT);
+  pinMode(12, OUTPUT);
+  pinMode(13, OUTPUT); //For led
+  digitalWrite(12, LOW);
   digitalWrite(13, LOW);
 }
 
 unsigned long int seconds(){
   return millis()/1000;
+}
+
+unsigned int analogReadN(int port){
+  unsigned int sum = 0;
+  
+  for(int i = 0; i < N; i++){
+    sum += analogRead(port);
+    delay(1);
+  }
+
+  return sum / N;
 }
 
 void loop(){
@@ -71,6 +89,7 @@ void loop(){
     lcd.setCursor(0,0);
     if(up){
       up = false;
+      digitalWrite(12, LOW);
       digitalWrite(13, LOW);
       timeEnd = timeNow + TL;
       lcd.print("Low  ");      
@@ -78,6 +97,7 @@ void loop(){
     }
     else{
       up = true;
+      digitalWrite(12, HIGH);
       digitalWrite(13, HIGH);
       timeEnd = timeNow + TH;
       lcd.print("High ");      
@@ -87,15 +107,18 @@ void loop(){
     }
   }
 
+  temp_timeLeft = timeLeft;
   timeLeft = timeEnd - timeNow;
-  lcd.setCursor(9,0);
-  lcd.print("   ");
-  lcd.setCursor(9,0);
-  lcd.print(timeLeft);
+  if(temp_timeLeft != timeLeft){
+    lcd.setCursor(9,0);
+    lcd.print("   ");
+    lcd.setCursor(9,0);
+    lcd.print(timeLeft);
+  }
   
   //Update parameters
   temp_TH = TH;
-  TH = analogRead(A0)/2;
+  TH = analogReadN(A0)/2;
   if (temp_TH != TH){
     lcd.setCursor(5,1);
     lcd.print("       ");
@@ -107,7 +130,7 @@ void loop(){
   }
   
   temp_TL = TL;
-  TL = analogRead(A1)/2;
+  TL = analogReadN(A1)/2;
   if (temp_TL != TL){
     lcd.setCursor(5,2);
     lcd.print("       ");
@@ -119,8 +142,8 @@ void loop(){
   }
   
   temp_Amplitud = Amplitud;
-  Amplitud = analogRead(A2)*5.0/1023.0;
-  if (temp_Amplitud != Amplitud){
+  Amplitud = analogReadN(A2)*5.0/1023.0;
+  if (256*abs(temp_Amplitud - Amplitud) > 1){
     lcd.setCursor(8,3);
     lcd.print("       ");
     lcd.setCursor(8,3);
@@ -128,6 +151,5 @@ void loop(){
   }
 
   //Wait a moment
-  delay(50);
+  delay(10);
 }
-
